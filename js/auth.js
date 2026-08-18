@@ -10,6 +10,7 @@ const STATUS_OPTIONS = [
   'Separado',
   'Aguardando peça',
   'Em manutenção',
+  'Em revisão',
   'Agendado',
   'Em Rota',
   'Entregue',
@@ -29,7 +30,8 @@ const STATUS_META = {
   'Em separação':     { cls: 'badge-separacao',       color: 'var(--s-separacao)' },
   'Separado':         { cls: 'badge-separado',        color: 'var(--s-separado)' },
   'Aguardando peça':  { cls: 'badge-aguardando-peca', color: 'var(--s-aguardando-peca)' },
-  'Em manutenção':    { cls: 'badge-manutencao',      color: 'var(--s-manutencao)' }
+  'Em manutenção':    { cls: 'badge-manutencao',      color: 'var(--s-manutencao)' },
+  'Em revisão':       { cls: 'badge-revisao',         color: 'var(--s-revisao)' }
 };
 
 function getStatusMeta(status) {

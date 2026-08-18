@@ -382,7 +382,7 @@ Retorne SOMENTE um JSON válido com esta estrutura:
 
 APIs e Funções Globais Disponíveis na página:
 1. jarvisHelpers.updateStatus(pedido, status)
-   - Status exatos: "Pendente", "Em separação", "Separado", "Aguardando peça", "Em manutenção", "Agendado", "Em Rota", "Entregue", "Concluído", "Retirado", "Cancelado".
+   - Status exatos: "Pendente", "Em separação", "Separado", "Aguardando peça", "Em manutenção", "Em revisão", "Agendado", "Em Rota", "Entregue", "Concluído", "Retirado", "Cancelado".
 2. jarvisHelpers.updateField(pedido, campo, valor)
    - Permite alterar QUALQUER campo de um pedido. Campos válidos: 'data', 'motorista', 'rota', 'placa', 'observacoes', 'frete', 'cliente'.
    - O 'valor' da data deve ser passado no formato brasileiro 'DD/MM/YYYY'.

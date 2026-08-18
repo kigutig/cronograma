@@ -599,24 +599,55 @@ function toggleFullscreenElement(selector, buttonId, iconId) {
   const el = document.querySelector(selector);
   if (!el) return;
 
-  const isFull = document.fullscreenElement === el;
+  const isNativeFull = document.fullscreenElement === el;
+  const isVirtualFull = el.classList.contains('virtual-fullscreen');
   const icon = document.getElementById(iconId);
   const btn = document.getElementById(buttonId);
 
-  if (!isFull) {
-    if (el.requestFullscreen) {
-      el.requestFullscreen()
-        .then(() => {
-          if (icon) icon.innerHTML = `<path d="M4 14h6v-6M20 10h-6v6M14 10l7-7M10 14l-7 7"/>`;
-          if (btn) {
-            btn.setAttribute('data-tip', 'Sair da tela cheia');
-            btn.setAttribute('title', 'Sair da tela cheia');
-          }
-        })
-        .catch(err => console.warn('Request fullscreen error:', err));
+  // Função interna para ativar a UI de fullscreen
+  const setFullUI = (active) => {
+    if (active) {
+      if (icon) icon.innerHTML = `<path d="M4 14h6v-6M20 10h-6v6M14 10l7-7M10 14l-7 7"/>`;
+      if (btn) {
+        btn.setAttribute('data-tip', 'Sair da tela cheia');
+        btn.setAttribute('title', 'Sair da tela cheia');
+      }
+    } else {
+      if (icon) icon.innerHTML = `<path d="M15 3h6v6M9 21H3v-6M21 15v6h-6M3 9V3h6"/>`;
+      if (btn) {
+        btn.setAttribute('data-tip', 'Tela cheia');
+        btn.setAttribute('title', 'Tela cheia');
+      }
     }
+  };
+
+  // Se já estiver em fullscreen (virtual ou nativo), sai
+  if (isNativeFull || isVirtualFull) {
+    if (isNativeFull) {
+      exitNativeFullscreen();
+    } else {
+      el.classList.remove('virtual-fullscreen');
+      setFullUI(false);
+    }
+    return;
+  }
+
+  // Tenta native fullscreen primeiro
+  if (el.requestFullscreen) {
+    el.requestFullscreen()
+      .then(() => {
+        setFullUI(true);
+      })
+      .catch(err => {
+        console.warn('Native fullscreen falhou (esperado para comandos assíncronos de voz). Ativando tela cheia virtual.', err);
+        // Fallback para tela cheia virtual por CSS (funciona sempre!)
+        el.classList.add('virtual-fullscreen');
+        setFullUI(true);
+      });
   } else {
-    exitNativeFullscreen();
+    // Se o navegador não suportar native fullscreen de jeito nenhum
+    el.classList.add('virtual-fullscreen');
+    setFullUI(true);
   }
 }
 

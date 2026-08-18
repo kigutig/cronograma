@@ -136,6 +136,7 @@ Os status estão organizados por etapas do fluxo operacional:
 - 🟢 **Separado:** Separação de itens concluída e pronta para expedição.
 - 🟠 **Aguardando peça:** Separação suspensa aguardando peças/itens em falta.
 - 🔴 **Em manutenção:** Mercadoria ou veículo retido para reparos.
+- 🩵 **Em revisão:** Pedido ou itens em processo de revisão/conferência.
 
 #### 🚚 Transporte
 - 🟡 **Agendado:** Rota e data de entrega definidas na grade.

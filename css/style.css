@@ -45,6 +45,8 @@
   --s-aguardando-peca-bg: rgba(249,115,22,.12);
   --s-manutencao:      #f43f5e;
   --s-manutencao-bg:   rgba(244,63,94,.12);
+  --s-revisao:         #22d3ee;
+  --s-revisao-bg:      rgba(34,211,238,.12);
   --s-concluido:       #10b981;
   --s-concluido-bg:    rgba(16,185,129,.12);
   --s-retirado:        #64748b;
@@ -102,6 +104,7 @@
   --s-separado-bg:     rgba(45,212,191,.10);
   --s-aguardando-peca-bg: rgba(249,115,22,.10);
   --s-manutencao-bg:   rgba(244,63,94,.10);
+  --s-revisao-bg:      rgba(34,211,238,.10);
   --s-concluido-bg:    rgba(16,185,129,.10);
   --s-retirado-bg:     rgba(100,116,139,.10);
 
@@ -333,6 +336,13 @@ button { font-family: inherit; }
   border: 1px solid rgba(244,63,94,.2);
 }
 .badge-manutencao .badge-dot { background: var(--s-manutencao); }
+
+.badge-revisao {
+  color: var(--s-revisao);
+  background: var(--s-revisao-bg);
+  border: 1px solid rgba(34,211,238,.2);
+}
+.badge-revisao .badge-dot { background: var(--s-revisao); }
 
 .badge-concluido {
   color: var(--s-concluido);

@@ -42,14 +42,16 @@
     }
 
     /* ── Fullscreen Mode Overrides ────────────────────────────── */
-    .table-wrap:fullscreen {
+    .table-wrap:fullscreen,
+    .table-wrap.virtual-fullscreen {
       background: var(--bg-base) !important;
       padding: 32px 24px !important;
       overflow-y: auto !important;
       display: flex;
       flex-direction: column;
     }
-    .table-wrap:fullscreen table {
+    .table-wrap:fullscreen table,
+    .table-wrap.virtual-fullscreen table {
       background: var(--bg-card) !important;
       border: 1px solid var(--border) !important;
       border-radius: var(--r-md) !important;
@@ -58,37 +60,46 @@
       height: 100% !important; /* Estica as linhas para preencher a tela */
       font-size: 20px !important; /* Aumentado para visualização ideal de longe */
     }
-    .table-wrap:fullscreen th {
+    .table-wrap:fullscreen th,
+    .table-wrap.virtual-fullscreen th {
       font-size: 15px !important;
       padding: 20px 24px !important;
     }
-    .table-wrap:fullscreen td {
+    .table-wrap:fullscreen td,
+    .table-wrap.virtual-fullscreen td {
       padding: 20px 24px !important;
     }
-    .table-wrap:fullscreen .pedido-chip {
+    .table-wrap:fullscreen .pedido-chip,
+    .table-wrap.virtual-fullscreen .pedido-chip {
       font-size: 18px !important;
       padding: 5px 12px !important;
       border-radius: var(--r-sm) !important;
     }
-    .table-wrap:fullscreen .placa-chip {
+    .table-wrap:fullscreen .placa-chip,
+    .table-wrap.virtual-fullscreen .placa-chip {
       font-size: 20px !important;
     }
-    .table-wrap:fullscreen .badge {
+    .table-wrap:fullscreen .badge,
+    .table-wrap.virtual-fullscreen .badge {
       font-size: 18px !important;
       padding: 6px 14px !important;
       border-radius: var(--r-sm) !important;
     }
-    .table-wrap:fullscreen .badge-dot {
+    .table-wrap:fullscreen .badge-dot,
+    .table-wrap.virtual-fullscreen .badge-dot {
       width: 8px !important;
       height: 8px !important;
     }
     .table-wrap:fullscreen .frete-cif,
-    .table-wrap:fullscreen .frete-fob {
+    .table-wrap:fullscreen .frete-fob,
+    .table-wrap.virtual-fullscreen .frete-cif,
+    .table-wrap.virtual-fullscreen .frete-fob {
       font-size: 18px !important;
       padding: 5px 12px !important;
       border-radius: var(--r-sm) !important;
     }
-    .table-wrap:fullscreen .td-cliente {
+    .table-wrap:fullscreen .td-cliente,
+    .table-wrap.virtual-fullscreen .td-cliente {
       max-width: none !important;
       overflow: visible !important;
       text-overflow: clip !important;
@@ -96,66 +107,91 @@
     }
     /* Oculta as colunas de ações em tela cheia */
     .table-wrap:fullscreen th.th-actions,
-    .table-wrap:fullscreen td.td-actions {
+    .table-wrap:fullscreen td.td-actions,
+    .table-wrap.virtual-fullscreen th.th-actions,
+    .table-wrap.virtual-fullscreen td.td-actions {
       display: none !important;
     }
-
-    .app-sidebar:fullscreen {
+ 
+    .app-sidebar:fullscreen,
+    .app-sidebar.virtual-fullscreen {
       background: var(--bg-base) !important;
       padding: 40px 32px !important;
       overflow-y: auto !important;
     }
-    .app-sidebar:fullscreen #aguardandoList {
+    .app-sidebar:fullscreen #aguardandoList,
+    .app-sidebar.virtual-fullscreen #aguardandoList {
       display: grid !important;
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
       gap: 20px !important;
     }
-    .app-sidebar:fullscreen .sidebar-header {
+    .app-sidebar:fullscreen .sidebar-header,
+    .app-sidebar.virtual-fullscreen .sidebar-header {
       margin-bottom: 32px !important;
       border-bottom: 2px solid var(--border) !important;
       padding-bottom: 20px !important;
     }
-    .app-sidebar:fullscreen .sidebar-title {
+    .app-sidebar:fullscreen .sidebar-title,
+    .app-sidebar.virtual-fullscreen .sidebar-title {
       font-size: 24px !important;
     }
-    .app-sidebar:fullscreen .ag-count {
+    .app-sidebar:fullscreen .ag-count,
+    .app-sidebar.virtual-fullscreen .ag-count {
       font-size: 15px !important;
       padding: 3px 10px !important;
     }
-    .app-sidebar:fullscreen .ag-card {
+    .app-sidebar:fullscreen .ag-card,
+    .app-sidebar.virtual-fullscreen .ag-card {
       background: var(--bg-card) !important;
       border: 1px solid var(--border) !important;
       box-shadow: var(--shadow-sm);
       padding: 20px !important;
       gap: 12px !important;
     }
-    .app-sidebar:fullscreen .ag-pedido {
+    .app-sidebar:fullscreen .ag-pedido,
+    .app-sidebar.virtual-fullscreen .ag-pedido {
       font-size: 20px !important;
     }
-    .app-sidebar:fullscreen .ag-cliente {
+    .app-sidebar:fullscreen .ag-cliente,
+    .app-sidebar.virtual-fullscreen .ag-cliente {
       font-size: 17px !important;
     }
-    .app-sidebar:fullscreen .ag-obs {
+    .app-sidebar:fullscreen .ag-obs,
+    .app-sidebar.virtual-fullscreen .ag-obs {
       font-size: 14px !important;
       padding: 10px 14px !important;
     }
-    .app-sidebar:fullscreen .btn-sm {
+    .app-sidebar:fullscreen .btn-sm,
+    .app-sidebar.virtual-fullscreen .btn-sm {
       font-size: 15px !important;
       padding: 8px 16px !important;
+    }
+ 
+    /* Estilos extras para a classe virtual-fullscreen */
+    .table-wrap.virtual-fullscreen,
+    .app-sidebar.virtual-fullscreen {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 99999 !important;
+      box-sizing: border-box !important;
     }
 
     /* Floating Exit Button */
     .fullscreen-exit-btn {
       display: none;
     }
-    :fullscreen .fullscreen-exit-btn {
+    :fullscreen .fullscreen-exit-btn,
+    .virtual-fullscreen .fullscreen-exit-btn {
       display: inline-flex !important;
       align-items: center;
       gap: 8px;
       position: fixed;
       bottom: 24px;
       right: 24px;
-      z-index: 99999;
+      z-index: 999999;
       box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.1);
       background: var(--bg-elevated) !important;
       color: var(--text-1) !important;
@@ -164,7 +200,8 @@
       border-radius: var(--r-md) !important;
       cursor: pointer;
     }
-    :fullscreen .fullscreen-exit-btn:hover {
+    :fullscreen .fullscreen-exit-btn:hover,
+    .virtual-fullscreen .fullscreen-exit-btn:hover {
       background: var(--bg-card-hover) !important;
       transform: translateY(-2px);
     }
@@ -916,6 +953,7 @@
             <option>Separado</option>
             <option>Aguardando peça</option>
             <option>Em manutenção</option>
+            <option>Em revisão</option>
           </optgroup>
           <optgroup label="Transporte">
             <option>Agendado</option>
@@ -1102,6 +1140,7 @@
               <option>Separado</option>
               <option>Aguardando peça</option>
               <option>Em manutenção</option>
+              <option>Em revisão</option>
             </optgroup>
             <optgroup label="Transporte">
               <option>Agendado</option>
