@@ -149,3 +149,22 @@ Como as tabelas do Supabase não têm a sincronização em tempo real ativada po
 4. Marque ou ative a chavinha para as tabelas `cronograma` e `aguardando`.
 5. Salve as alterações.
 
+
+---
+
+## 🎤 Jarvis (assistente de voz) — chave segura
+
+A chave do Groq **não fica no código nem no navegador**. O front-end chama a Edge Function
+`supabase/functions/jarvis`, que guarda a chave como segredo e só atende usuários logados e ativos.
+
+1. Gere uma chave em https://console.groq.com/keys
+2. Salve como segredo no Supabase:
+   ```bash
+   supabase secrets set GROQ_API_KEY=gsk_SUA_CHAVE --project-ref mpyakbkgqraryjypsuki
+   ```
+3. (Re)publique a função quando alterá-la:
+   ```bash
+   supabase functions deploy jarvis --project-ref mpyakbkgqraryjypsuki --use-api
+   ```
+
+> Nunca coloque chaves de API em arquivos `.js` do front-end — tudo que vai ao navegador é público.

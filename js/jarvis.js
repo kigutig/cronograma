@@ -1,26 +1,24 @@
 // ============================================================
-// JARVIS.JS — Assistente de Voz com IA (Gemini + Web Speech)
+// JARVIS.JS — Assistente de Voz com IA (Groq + Web Speech)
+// ------------------------------------------------------------
+// A IA é chamada pela Supabase Edge Function "jarvis"
+// (supabase/functions/jarvis). A chave do Groq fica só no servidor
+// como segredo — nenhuma chave é enviada ao navegador.
 // ============================================================
 
-const JARVIS_KEY_STORAGE  = 'jarvis-groq-key';
 const JARVIS_WAKE_WORD    = 'jarvis';
-const GROQ_MODEL          = 'llama-3.1-8b-instant';
-const GROQ_API_BASE       = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_DEFAULT_KEY    = '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';
+const JARVIS_FUNCTION     = 'jarvis';
 
 // ── Estado interno ────────────────────────────────────────────
 let _recognition   = null;
 let _isListening   = false;
 let _isBusy        = false;   // processando IA
-let _geminiKey     = '';
 let _jarvisReady   = false;
 
 // ── Inicialização ─────────────────────────────────────────────
 function initJarvis() {
-  // Carrega key: localStorage > jarvis-config.js (local) > chave padrão embutida
-  _geminiKey = localStorage.getItem(JARVIS_KEY_STORAGE)
-            || (window.JARVIS_GEMINI_KEY || '')
-            || GROQ_DEFAULT_KEY;
+  // Limpa chaves antigas que versões anteriores salvavam no navegador
+  localStorage.removeItem('jarvis-groq-key');
 
   // Verifica suporte à Web Speech API
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -280,11 +278,6 @@ function toggleJarvis() {
     return;
   }
 
-  if (!_geminiKey) {
-    openJarvisConfig();
-    return;
-  }
-
   if (_isListening) {
     _stopListening();
   } else {
@@ -367,131 +360,25 @@ function _onSpeechEnd() {
   }
 }
 
-// ── Interpretação via Groq ────────────────────────────────────
+// ── Interpretação via Edge Function (Groq no servidor) ───────
 async function _interpretCommand(text) {
-  const systemPrompt = `Você é o Jarvis, assistente de voz do Cockpit de Entregas.
-O usuário falou: "${text}"
-
-Seu trabalho é gerar um código Javascript curto que controle a página web de acordo com o comando do usuário, junto com a fala de confirmação do assistente.
-
-Retorne SOMENTE um JSON válido com esta estrutura:
-{
-  "code": "código javascript válido para ser executado com eval()",
-  "speech": "resposta por voz curta em português (máx 15 palavras)"
-}
-
-APIs e Funções Globais Disponíveis na página:
-1. jarvisHelpers.updateStatus(pedido, status)
-   - Status exatos: "Pendente", "Em separação", "Separado", "Aguardando peça", "Em manutenção", "Em revisão", "Agendado", "Em Rota", "Entregue", "Concluído", "Retirado", "Cancelado".
-2. jarvisHelpers.updateField(pedido, campo, valor)
-   - Permite alterar QUALQUER campo de um pedido. Campos válidos: 'data', 'motorista', 'rota', 'placa', 'observacoes', 'frete', 'cliente'.
-   - O 'valor' da data deve ser passado no formato brasileiro 'DD/MM/YYYY'.
-3. jarvisHelpers.createPedido(dados)
-   - Cria um novo pedido direto no cronograma. O objeto 'dados' pode ter: { pedido, cliente, data, motorista, rota, placa, status, frete, observacoes }.
-4. jarvisHelpers.addAguardando(pedido, cliente, observacoes) -> Adiciona um pedido novo à lista de espera/aguardando.
-5. jarvisHelpers.deleteAguardando(pedido) -> Exclui um pedido da lista de espera.
-6. jarvisHelpers.agendarAguardandoDireto(pedido, dadosAgendamento)
-   - Tira um pedido da lista de espera e cria no cronograma com dados: { data, motorista, rota, placa, status, frete, observacoes }.
-7. jarvisHelpers.filterDateRange(de, ate) -> Filtra o cronograma pelo intervalo de datas brasileiro (ex: '10/07/2026', '15/07/2026').
-8. jarvisHelpers.viewPedido(pedido) -> Abre visualização detalhada do pedido
-9. jarvisHelpers.editPedido(pedido) -> Abre modal de edição do pedido
-10. jarvisHelpers.deletePedido(pedido) -> Abre diálogo para deletar o pedido
-11. jarvisHelpers.agendarAguardando(pedido) -> Abre o modal de agendamento manual de um item da espera.
-12. jarvisHelpers.openAddAguardandoModal() -> Abre o formulário de inclusão de item em aguardando.
-13. jarvisHelpers.search(texto) -> Busca por texto/cliente/motorista
-14. jarvisHelpers.filterStatus(status) -> Filtra por status
-15. jarvisHelpers.clearAll() -> Limpa todos os filtros de busca/status/data
-16. switchTab('cronograma' | 'arquivo') -> Muda de aba
-17. toggleTheme() -> Alterna tema do site (escuro/claro)
-18. openAddModal() -> Abre tela para criar novo pedido do zero
-19. toggleFullscreenElement('#tableWrap', 'btnFullscreen', 'fullscreenIcon') -> Tela cheia
-
-Variáveis Globais que você pode ler se precisar:
-- allRows: array contendo todos os pedidos atuais. Cada pedido é um objeto com estes campos exatos:
-  * pedido (número do pedido)
-  * cliente (nome do cliente)
-  * motorista (nome do motorista)
-  * rota (rota de entrega)
-  * placa (placa do veículo)
-  * status (status atual)
-  * observacoes (observações do registro)
-  * data (data no formato 'YYYY-MM-DD', você pode formatá-la usando a função global fmtDate(row.data))
-- aguardandoList: array de pedidos aguardando agendamento { id, pedido, cliente, observacoes }
-- activeTab: string 'cronograma' ou 'arquivo'
-
-Regras de Geração do Código:
-- NUNCA utilize variáveis não declaradas como 'pedido', 'status', 'rota' etc.
-- Passe sempre os valores diretamente como strings ou números nas chamadas.
-- Para responder perguntas gerais sobre os dados de um pedido (data, motorista, rota, observações, cliente etc.), escreva um código JS que localize o pedido em allRows e use a função _jarvisSay() para falar a resposta exata.
-- EXEMPLOS DE CÓDIGO CORRETOS PARA CADA INTENÇÃO:
-  * Para criar um novo pedido no cronograma (ex: pedido 7000 para cliente Acme no dia 20/07/2026):
-    "code": "jarvisHelpers.createPedido({ pedido: '7000', cliente: 'Acme', data: '20/07/2026', motorista: 'Carlos' });", "speech": "Criando pedido 7000 no cronograma."
-  * Para adicionar à lista de espera/aguardando (ex: pedido 8000 para cliente Fenix):
-    "code": "jarvisHelpers.addAguardando('8000', 'Fenix', 'Urgente');", "speech": "Adicionando pedido 8000 à lista de espera."
-  * Para agendar/promover direto um pedido que está em aguardando (ex: pedido 8000 para o dia 22/07/2026 com motorista Carlos):
-    "code": "jarvisHelpers.agendarAguardandoDireto('8000', { data: '22/07/2026', motorista: 'Carlos' });", "speech": "Agendando pedido da lista de espera."
-  * Para excluir do aguardando/espera (ex: pedido 8000):
-    "code": "jarvisHelpers.deleteAguardando('8000');", "speech": "Removendo pedido 8000 da lista de espera."
-  * Para filtrar entregas de 10/07/2026 a 15/07/2026:
-    "code": "jarvisHelpers.filterDateRange('10/07/2026', '15/07/2026');", "speech": "Filtrando período de 10 a 15 de julho."
-  * Para alterar a data do pedido 5909 para 20/07/2026:
-    "code": "jarvisHelpers.updateField('5909', 'data', '20/07/2026');", "speech": "Alterando a data do pedido 5909 para 20 de julho."
-  * Para alterar o motorista do pedido 5909 para Carlos:
-    "code": "jarvisHelpers.updateField('5909', 'motorista', 'Carlos');", "speech": "Alterando motorista do pedido 5909 para Carlos."
-  * Para saber/perguntar a data do pedido 5909:
-    "code": "const row = allRows.find(r => String(r.pedido) === '5909'); if (row) { _jarvisSay('A data do pedido 5909 é ' + fmtDate(row.data)); } else { _jarvisSay('Pedido 5909 não encontrado.'); }", "speech": "Buscando a data do pedido..."
-  * Para saber/perguntar quem é o motorista do pedido 5909:
-    "code": "const row = allRows.find(r => String(r.pedido) === '5909'); if (row) { _jarvisSay('O motorista do pedido 5909 é ' + (row.motorista || 'não informado')); } else { _jarvisSay('Pedido não encontrado.'); }", "speech": "Buscando motorista..."
-  * Para saber/perguntar a rota ou destino do pedido 5909:
-    "code": "const row = allRows.find(r => String(r.pedido) === '5909'); if (row) { _jarvisSay('A rota do pedido 5909 é ' + (row.rota || 'não informada')); } else { _jarvisSay('Pedido não encontrado.'); }", "speech": "Buscando rota..."
-  * Para consultar/ver/saber o status do pedido 5909 (abrindo detalhes):
-    "code": "jarvisHelpers.viewPedido('5909');", "speech": "Aqui está o status do pedido 5909."
-  * Para alterar o status do pedido 5909 para Entregue:
-    "code": "jarvisHelpers.updateStatus('5909', 'Entregue');", "speech": "Pedido 5909 alterado para Entregue."
-  * Para buscar/filtrar por cliente João:
-    "code": "jarvisHelpers.search('João');", "speech": "Filtrando pedidos do João."
-  * Para limpar filtros de busca:
-    "code": "jarvisHelpers.clearAll();", "speech": "Filtros limpos."
-  * Para mudar de aba:
-    "code": "switchTab('arquivo');", "speech": "Abrindo aba arquivo."
-  * Para fechar telas/modais abertos:
-    "code": "closeModal('rowModal'); closeModal('viewModal');", "speech": "Telas fechadas."
-  * Para mudar o tema do site:
-    "code": "toggleTheme();", "speech": "Tema alterado."
-  * Para entrar/sair de tela cheia:
-    "code": "toggleFullscreenElement('#tableWrap', 'btnFullscreen', 'fullscreenIcon');", "speech": "Tela cheia alternada."
-
-Retorne APENAS o JSON, sem markdown ou explicações.`;
-
   try {
-    const res = await fetch(
-      GROQ_API_BASE,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${_geminiKey}`
-        },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          messages: [
-            { role: 'system', content: 'Você é um assistente que retorna APENAS JSON válido, sem markdown, sem explicações.' },
-            { role: 'user',   content: systemPrompt }
-          ],
-          temperature: 0.1,
-          max_tokens: 256,
-          response_format: { type: 'json_object' }
-        })
-      }
-    );
+    const { data, error } = await db.functions.invoke(JARVIS_FUNCTION, {
+      body: { text }
+    });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      if (res.status === 400 || res.status === 403) {
-        showToast('API Key inválida. Verifique nas configurações do Jarvis.', 'error');
-        _setOverlay('show', '❌ API Key inválida', text);
+    if (error) {
+      let msg = error.message || 'Erro desconhecido';
+      try {
+        const body = await error.context?.json?.();
+        if (body?.error) msg = body.error;
+      } catch (_) {}
+      const status = error.context?.status;
+      if (status === 401 || status === 403) {
+        showToast('Sessão inválida ou usuário sem permissão para usar o Jarvis.', 'error');
+        _setOverlay('show', '❌ Sem permissão', text);
       } else {
-        showToast(`Erro Gemini: ${err?.error?.message || res.statusText}`, 'error');
+        showToast(`Erro Jarvis: ${msg}`, 'error');
         _setOverlay('show', '❌ Erro ao processar', text);
       }
       _isBusy = false;
@@ -500,10 +387,8 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       return;
     }
 
-    const data  = await res.json();
-    // Groq usa formato OpenAI: choices[0].message.content
-    const raw   = data?.choices?.[0]?.message?.content || '{}';
-    const finishReason = data?.choices?.[0]?.finish_reason;
+    const raw          = data?.content || '{}';
+    const finishReason = data?.finish_reason;
 
     console.log('%c🤖 Groq respondeu:', 'color:#a78bfa;font-weight:bold', raw);
     console.log('%c📋 finishReason:', 'color:#a78bfa', finishReason, '| chars:', raw.length);
@@ -648,58 +533,6 @@ function _updateJarvisUI(state) {
   btn.setAttribute('data-tip', s.tip);
 
   btn.classList.toggle('jarvis-active', state !== 'off');
-}
-
-// ── Configuração da API Key ───────────────────────────────────
-function openJarvisConfig() {
-  const modal = document.getElementById('jarvisConfigModal');
-  if (!modal) return;
-
-  const input = document.getElementById('jarvisKeyInput');
-  if (input) input.value = _geminiKey || '';
-
-  const statusEl = document.getElementById('jarvisKeyStatus');
-  if (statusEl) {
-    statusEl.textContent = _geminiKey ? '✅ API Key configurada' : '⚠️ Nenhuma API Key configurada';
-    statusEl.className = `jarvis-key-status ${_geminiKey ? 'has-key' : 'no-key'}`;
-  }
-
-  openModal('jarvisConfigModal');
-}
-
-function saveJarvisKey() {
-  const input = document.getElementById('jarvisKeyInput');
-  const key   = (input?.value || '').trim();
-
-  if (!key) {
-    showToast('Cole sua API Key do Google AI Studio.', 'warning');
-    return;
-  }
-
-  localStorage.setItem(JARVIS_KEY_STORAGE, key);
-  _geminiKey = key;
-
-  showToast('✅ API Key salva! Jarvis pronto para uso.', 'success');
-  closeModal('jarvisConfigModal');
-
-  // Ativa o Jarvis automaticamente após configurar
-  if (_jarvisReady && !_isListening) {
-    setTimeout(() => toggleJarvis(), 500);
-  }
-}
-
-function removeJarvisKey() {
-  localStorage.removeItem(JARVIS_KEY_STORAGE);
-  _geminiKey = '';
-  const input = document.getElementById('jarvisKeyInput');
-  if (input) input.value = '';
-  const statusEl = document.getElementById('jarvisKeyStatus');
-  if (statusEl) {
-    statusEl.textContent = '⚠️ Nenhuma API Key configurada';
-    statusEl.className   = 'jarvis-key-status no-key';
-  }
-  showToast('API Key removida.', 'info');
-  if (_isListening) _stopListening();
 }
 
 function closeJarvisOverlay() {

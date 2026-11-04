@@ -23,5 +23,9 @@ desktop.ini
 dist/
 build/
 
-# Jarvis — chave da API (nunca vai para o GitHub)
+# Segredos locais (nunca vão para o GitHub)
+# A chave do Groq fica no Supabase: supabase secrets set GROQ_API_KEY=...
 js/jarvis-config.js
+supabase/.env
+supabase/functions/.env
+supabase/.temp/
