@@ -10,3 +10,9 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     realtime: { params: { eventsPerSecond: 10 } }
 });
+
+if (typeof window !== 'undefined') {
+  window.db = db;
+  window.SUPABASE_URL = SUPABASE_URL;
+  window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+}

@@ -733,3 +733,33 @@ document.addEventListener('fullscreenchange', () => {
     }
   }
 });
+
+// ── Exportações Globais para o Navegador e Ambiente de Testes ─
+if (typeof window !== 'undefined') {
+  window.initApp = initApp;
+  window.switchTab = switchTab;
+  window.updateTabCounts = updateTabCounts;
+  window.setupFilters = setupFilters;
+  window.applyFilters = applyFilters;
+  window.clearFilters = clearFilters;
+  window.quickStatus = quickStatus;
+  window.agendarItem = agendarItem;
+  window.openAddModal = openAddModal;
+  window.openEditModal = openEditModal;
+  window.saveRow = saveRow;
+  window.openAddAguardando = openAddAguardando;
+  window.saveAguardando = saveAguardando;
+  window.confirmDelete = confirmDelete;
+  window.executeDelete = executeDelete;
+  window.openViewModal = openViewModal;
+  window.openViewAguardando = openViewAguardando;
+  window.toggleFullscreenElement = toggleFullscreenElement;
+  window.resetForm = resetForm;
+  window.updateRowCount = updateRowCount;
+  window.hidePageLoading = hidePageLoading;
+  window.getStatusMeta = getStatusMeta;
+  window.renderTable = renderTable;
+  window.renderAguardando = renderAguardando;
+  window.loadCronograma = loadCronograma;
+  window.loadAguardando = loadAguardando;
+}

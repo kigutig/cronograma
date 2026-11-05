@@ -180,3 +180,4 @@ O pipeline falhará e **bloqueará o merge/deploy** se:
 3. **Rollback:**
    - Para reverter um deploy defeituoso, utilize `git revert <commit-hash>` e faça push para a `main`.
    - O pipeline reexecutará todos os testes e publicará a versão estável imediatamente.
+

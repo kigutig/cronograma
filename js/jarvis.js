@@ -562,5 +562,10 @@ async function jarvisTest(texto) {
   _isBusy = false;
 }
 
-// Expõe globalmente para uso no console
+// Expõe globalmente para uso no console e interface
 window.jarvisTest = jarvisTest;
+if (typeof window !== 'undefined') {
+  window.initJarvis = initJarvis;
+  window.toggleJarvis = toggleJarvis;
+  window.closeJarvisOverlay = closeJarvisOverlay;
+}

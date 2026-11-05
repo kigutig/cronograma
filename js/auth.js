@@ -204,3 +204,26 @@ function updateThemeButton(theme) {
     btn.setAttribute('data-tip', 'Modo claro');
   }
 }
+
+// ── Exportações Globais para o Navegador e Ambiente de Testes ─
+if (typeof window !== 'undefined') {
+  window.getSession = getSession;
+  window.getCurrentUser = getCurrentUser;
+  window.getUserProfile = getUserProfile;
+  window.requireAuth = requireAuth;
+  window.requireAdmin = requireAdmin;
+  window.isAdmin = isAdmin;
+  window.isEditor = isEditor;
+  window.doSignOut = doSignOut;
+  window.showToast = showToast;
+  window.escHtml = escHtml;
+  window.fmtDate = fmtDate;
+  window.fmtCurrency = fmtCurrency;
+  window.fmtDateTime = fmtDateTime;
+  window.friendlyError = friendlyError;
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+  window.initTheme = initTheme;
+  window.toggleTheme = toggleTheme;
+  window.ROLE_LABELS = ROLE_LABELS;
+}

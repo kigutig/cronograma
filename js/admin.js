@@ -284,3 +284,18 @@ function toggleNewPwd() {
 // Inicia ao carregar
 document.addEventListener('DOMContentLoaded', initAdmin);
 
+// ── Exportações Globais para o Navegador e Ambiente de Testes ─
+if (typeof window !== 'undefined') {
+  window.initAdmin = initAdmin;
+  window.loadUsers = loadUsers;
+  window.renderUsers = renderUsers;
+  window.filterUsers = filterUsers;
+  window.getInitials = getInitials;
+  window.openRoleModal = openRoleModal;
+  window.saveRole = saveRole;
+  window.toggleUserActive = toggleUserActive;
+  window.openCreateUserModal = openCreateUserModal;
+  window.createUser = createUser;
+  window.toggleNewPwd = toggleNewPwd;
+}
+
