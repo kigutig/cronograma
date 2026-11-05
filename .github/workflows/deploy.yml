@@ -1,0 +1,120 @@
+# ============================================================
+# DEPLOY — Publicação automática da Supabase Edge Function
+# Executa somente em push na branch main quando arquivos
+# da Edge Function são alterados.
+# Requer GitHub Secrets:
+#   SUPABASE_ACCESS_TOKEN   — token da conta Supabase (Account Settings)
+#   SUPABASE_PROJECT_REF    — project-ref do projeto Supabase
+# ============================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch:  # Permite trigger manual
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false  # nunca cancela um deploy em andamento
+
+jobs:
+  # -----------------------------------------------------------
+  # Verificações pré-deploy (must pass antes de publicar)
+  # -----------------------------------------------------------
+  pre-deploy-checks:
+    name: Pre-deploy Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run build
+        run: npm run build
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+  # -----------------------------------------------------------
+  # Deploy da Edge Function no Supabase
+  # -----------------------------------------------------------
+  deploy-edge-function:
+    name: Deploy Edge Function (Supabase)
+    runs-on: ubuntu-latest
+    needs: pre-deploy-checks
+    environment:
+      name: production
+      url: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy function — jarvis
+        run: |
+          supabase functions deploy jarvis \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --use-api
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Smoke test — Edge Function health
+        run: |
+          echo "Aguardando propagação..."
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            https://${{ secrets.SUPABASE_PROJECT_REF }}.functions.supabase.co/jarvis \
+            -d '{"messages":[],"ping":true}')
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" -ge 500 ]; then
+            echo "❌ Edge Function retornou $STATUS — deploy pode ter falhado."
+            exit 1
+          fi
+          echo "✅ Edge Function respondeu com $STATUS"
+
+  # -----------------------------------------------------------
+  # Notificação de deploy concluído
+  # -----------------------------------------------------------
+  notify:
+    name: Notify Deploy Result
+    runs-on: ubuntu-latest
+    needs: [pre-deploy-checks, deploy-edge-function]
+    if: always()
+    steps:
+      - name: Deploy summary
+        run: |
+          if [ "${{ needs.deploy-edge-function.result }}" == "success" ]; then
+            echo "🚀 Deploy concluído com sucesso!"
+            echo "Projeto: ${{ secrets.SUPABASE_PROJECT_REF }}"
+            echo "Commit:  ${{ github.sha }}"
+            echo "Branch:  ${{ github.ref_name }}"
+          else
+            echo "❌ Deploy falhou."
+            echo "Verifique os logs em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            exit 1
+          fi
+

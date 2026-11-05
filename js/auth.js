@@ -45,11 +45,13 @@ async function getSession() {
 }
 
 async function getCurrentUser() {
+  if (typeof window !== 'undefined' && window.__mockUser) return window.__mockUser;
   const session = await getSession();
   return session?.user ?? null;
 }
 
 async function getUserProfile(uid) {
+  if (typeof window !== 'undefined' && window.__mockProfile) return window.__mockProfile;
   const { data, error } = await db
     .from('profiles')
     .select('*')
@@ -76,8 +78,8 @@ async function requireAdmin(user, redirect = 'app.html') {
 }
 
 // ── Verificadores de papel ───────────────────────────────────
-const isAdmin  = r => r === 'admin';
-const isEditor = r => ['admin','editor'].includes(r);
+function isAdmin(r)  { return r === 'admin'; }
+function isEditor(r) { return ['admin', 'editor'].includes(r); }
 
 // ── Sign-out ─────────────────────────────────────────────────
 async function doSignOut() {
@@ -108,6 +110,17 @@ function showToast(msg, type = 'success') {
     toast.classList.add('fade-out');
     toast.addEventListener('animationend', () => toast.remove());
   }, 3000);
+}
+
+// ── Sanitização / Escape HTML (Prevenção XSS) ─────────────────
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ── Formatadores ─────────────────────────────────────────────

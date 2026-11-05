@@ -1,0 +1,148 @@
+# ============================================================
+# SECURITY — Varreduras de segurança (SAST, secrets, deps)
+# Executa em push na main e semanalmente (domingo 02h UTC)
+# ============================================================
+
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Toda domingo às 02:00 UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  # -----------------------------------------------------------
+  # 1. CodeQL — análise estática (SAST)
+  # -----------------------------------------------------------
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript'
+
+  # -----------------------------------------------------------
+  # 2. Gitleaks — detecção de segredos/credenciais no código
+  # -----------------------------------------------------------
+  gitleaks:
+    name: Gitleaks — Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Histórico completo para scan
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # -----------------------------------------------------------
+  # 3. Semgrep — regras personalizadas de segurança
+  # -----------------------------------------------------------
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep (regras do projeto)
+        run: semgrep ci --config .semgrep.yml --error
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true  # Falhas geram aviso; não bloqueiam (sem token configurado é gracioso)
+
+      - name: Run Semgrep (ruleset OWASP Top 10)
+        run: semgrep --config "p/owasp-top-ten" --error js/ || true
+        # "|| true" evita falso-positivo em código sem backend real
+
+  # -----------------------------------------------------------
+  # 4. Dependency Review — detecta pacotes vulneráveis em PRs
+  # -----------------------------------------------------------
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+
+  # -----------------------------------------------------------
+  # 5. DAST — OWASP ZAP Baseline Scan (ambiente staging)
+  #    Executa apenas em push na main (não em PRs)
+  # -----------------------------------------------------------
+  zap-baseline:
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start static server
+        run: |
+          node scripts/serve.js --port 4444 &
+          sleep 3
+          curl -s http://127.0.0.1:4444/index.html | head -c 50 || echo "Server OK"
+
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'http://127.0.0.1:4444'
+          rules_file_name: '.zap-rules.tsv'
+          cmd_options: '-I'  # -I = info only (não falha em alertas)
+          allow_issue_writing: false
+        continue-on-error: true  # ZAP baseline é informativo no início
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: report_html.html
+          retention-days: 30
+

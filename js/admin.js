@@ -59,8 +59,8 @@ function renderUsers(users) {
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="user-avatar">${getInitials(u.nome || u.email)}</div>
           <div>
-            <div style="font-weight:600;color:var(--text-1);">${u.nome || '—'}</div>
-            <div style="font-size:12px;color:var(--text-3);">${u.email}</div>
+            <div style="font-weight:600;color:var(--text-1);">${escHtml(u.nome) || '—'}</div>
+            <div style="font-size:12px;color:var(--text-3);">${escHtml(u.email)}</div>
           </div>
         </div>
       </td>
@@ -74,7 +74,7 @@ function renderUsers(users) {
       <td style="color:var(--text-3);font-size:12.5px;">${fmtDateTime(u.criado_em)}</td>
       <td>
         <div style="display:flex;gap:6px;align-items:center;">
-          ${u.id !== adminUser.id ? `
+          ${u.id !== (adminUser?.id || window.adminUser?.id) ? `
             <button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.nome||u.email}','${u.papel}')"
               data-tip="Alterar papel">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

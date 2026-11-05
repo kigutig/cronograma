@@ -298,7 +298,7 @@ function _startListening() {
 }
 
 function _stopListening() {
-  try { _recognition.stop(); } catch (_) {}
+  try { _recognition.stop(); } catch { /* ignore */ }
   _isListening = false;
   _isBusy = false;
   _updateJarvisUI('off');
@@ -306,7 +306,7 @@ function _stopListening() {
 }
 
 function _stopMicrophone() {
-  try { _recognition.stop(); } catch (_) {}
+  try { _recognition.stop(); } catch { /* ignore */ }
   _isListening = false;
   _updateJarvisUI('off');
 }
@@ -356,7 +356,7 @@ function _onSpeechError(event) {
 function _onSpeechEnd() {
   // Reinicia automaticamente se ainda deveria estar ouvindo
   if (_isListening && !_isBusy) {
-    try { _recognition.start(); } catch (_) {}
+    try { _recognition.start(); } catch { /* ignore */ }
   }
 }
 
@@ -372,7 +372,7 @@ async function _interpretCommand(text) {
       try {
         const body = await error.context?.json?.();
         if (body?.error) msg = body.error;
-      } catch (_) {}
+      } catch { /* ignore */ }
       const status = error.context?.status;
       if (status === 401 || status === 403) {
         showToast('Sessão inválida ou usuário sem permissão para usar o Jarvis.', 'error');
@@ -403,7 +403,7 @@ async function _interpretCommand(text) {
     try {
       action = JSON.parse(clean);
       console.log('%c✅ Ação interpretada:', 'color:#4ade80;font-weight:bold', action);
-    } catch (e) {
+    } catch {
       console.warn('%c⚠️ JSON parse falhou. Resposta bruta:', 'color:#fbbf24', raw);
       action = { action: 'unknown', message: 'Não consegui interpretar o comando.' };
     }

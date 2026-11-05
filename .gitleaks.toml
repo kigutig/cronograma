@@ -1,0 +1,19 @@
+# Gitleaks Configuration for Cronograma de Entregas
+title = "Cronograma Gitleaks Configuration"
+
+[extend]
+# Estende regras padrão do Gitleaks
+
+[allowlist]
+description = "Permite arquivos de exemplo e testes sem chaves reais"
+paths = [
+  '''^\.env\.example$''',
+  '''^tests/.*''',
+  '''^package-lock\.json$''',
+  '''^dist/.*'''
+]
+regexes = [
+  '''gsk_exemplo_.*''',
+  '''exemplo_chave_.*'''
+]
+

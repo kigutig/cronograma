@@ -4,8 +4,8 @@
 
 let currentUser = null;
 let userProfile = null;
-let allRows = [];
-let aguardandoList = [];
+let allRows = (typeof window !== 'undefined' && window.allRows) || [];
+let aguardandoList = (typeof window !== 'undefined' && window.aguardandoList) || [];
 let editingRowId = null;
 let realtimeSub = null;
 let aguardandoSub = null;
@@ -48,8 +48,8 @@ function renderUserHeader() {
 
 // ── Permissões / visibilidade ────────────────────────────────
 function setupPermissions() {
-  const canEdit = isEditor(userProfile.papel);
-  const canDelete = isAdmin(userProfile.papel);
+  const canEdit = isEditor(userProfile?.papel || window.userProfile?.papel || 'viewer');
+  const canDelete = isAdmin(userProfile?.papel || window.userProfile?.papel || 'viewer');
 
   document.querySelectorAll('.editor-action').forEach(el => {
     el.style.display = canEdit ? '' : 'none';
@@ -61,6 +61,13 @@ function setupPermissions() {
 
 // ── Carregar cronograma ───────────────────────────────────────
 async function loadCronograma() {
+  if (typeof window !== 'undefined' && window.__mockRows) {
+    allRows = window.__mockRows;
+    window.allRows = allRows;
+    updateTabCounts();
+    applyFilters();
+    return;
+  }
   const { data, error } = await db
     .from('cronograma')
     .select('*')
@@ -78,6 +85,12 @@ async function loadCronograma() {
 
 // ── Carregar Aguardando ───────────────────────────────────────
 async function loadAguardando() {
+  if (typeof window !== 'undefined' && window.__mockAguardando) {
+    aguardandoList = window.__mockAguardando;
+    window.aguardandoList = aguardandoList;
+    renderAguardando();
+    return;
+  }
   const { data, error } = await db
     .from('aguardando')
     .select('*')
@@ -90,22 +103,28 @@ async function loadAguardando() {
 
 // ── Real-time subscriptions ───────────────────────────────────
 function setupRealtime() {
-  realtimeSub = db.channel('cronograma-rt')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'cronograma' }, () => {
-      loadCronograma();
-    })
-    .subscribe();
+  if (!db || typeof db.channel !== 'function') return;
+  try {
+    realtimeSub = db.channel('cronograma-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cronograma' }, () => {
+        loadCronograma();
+      })
+      .subscribe();
 
-  aguardandoSub = db.channel('aguardando-rt')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'aguardando' }, () => {
-      loadAguardando();
-    })
-    .subscribe();
+    aguardandoSub = db.channel('aguardando-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'aguardando' }, () => {
+        loadAguardando();
+      })
+      .subscribe();
+  } catch {
+    /* ignore realtime errors in test environments */
+  }
 }
 
 // ── Abas (Tab Navigation) ───────────────────────────────────────
 function switchTab(tab) {
   activeTab = tab;
+  if (typeof window !== 'undefined') window.activeTab = tab;
 
   // Atualizar botoes de aba
   document.getElementById('tabCronograma')?.classList.toggle('active', tab === 'cronograma');
@@ -127,8 +146,9 @@ function switchTab(tab) {
 }
 
 function updateTabCounts() {
-  const active = allRows.filter(r => !ARCHIVED_STATUS.includes(r.status || 'Pendente'));
-  const archived = allRows.filter(r => ARCHIVED_STATUS.includes(r.status || 'Pendente'));
+  const source = (allRows && allRows.length > 0) ? allRows : (window.allRows || []);
+  const active = source.filter(r => !ARCHIVED_STATUS.includes(r.status || 'Pendente'));
+  const archived = source.filter(r => ARCHIVED_STATUS.includes(r.status || 'Pendente'));
   const elC = document.getElementById('tabCountCronograma');
   const elA = document.getElementById('tabCountArquivo');
   if (elC) elC.textContent = active.length;
@@ -150,7 +170,8 @@ function applyFilters() {
   const to = document.getElementById('dateTo')?.value || '';
 
   // Pre-filtra pelo conjunto de status da aba ativa
-  const tabRows = allRows.filter(r => {
+  const sourceRows = (allRows?.length ? allRows : (window.allRows || []));
+  const tabRows = sourceRows.filter(r => {
     const isArchived = ARCHIVED_STATUS.includes(r.status || 'Pendente');
     return activeTab === 'arquivo' ? isArchived : !isArchived;
   });
@@ -185,8 +206,8 @@ function updateRowCount(n) {
 function renderTable(rows) {
   const tbody = document.getElementById('cronogramaBody');
   const empty = document.getElementById('emptyState');
-  const canEdit = isEditor(userProfile.papel);
-  const canDelete = isAdmin(userProfile.papel);
+  const canEdit = isEditor(userProfile?.papel || window.userProfile?.papel || 'viewer');
+  const canDelete = isAdmin(userProfile?.papel || window.userProfile?.papel || 'viewer');
 
   if (!rows || rows.length === 0) {
     tbody.innerHTML = '';
@@ -198,29 +219,35 @@ function renderTable(rows) {
   tbody.innerHTML = rows.map(r => {
     const sm = getStatusMeta(r.status || 'Pendente');
     const archivedCls = activeTab === 'arquivo' ? ' archived-row' : '';
+    const pedidoEsc = escHtml(r.pedido || '');
+    const clienteEsc = escHtml(r.cliente || '');
+    const rotaEsc = escHtml(r.rota || '');
+    const placaEsc = escHtml(r.placa || '');
+    const motoristaEsc = escHtml(r.motorista || '');
+    const statusEsc = escHtml(r.status || 'Pendente');
     return `
     <tr class="tbl-row${archivedCls}" data-id="${r.id}" onclick="openViewModal('${r.id}')" title="Ver detalhes">
       <td class="td-date">${fmtDate(r.data)}</td>
-      <td><span class="pedido-chip">${r.pedido || '—'}</span></td>
-      <td class="td-cliente">${r.cliente || '—'}</td>
-      <td>${r.rota || '—'}</td>
-      <td><span class="placa-chip">${(r.placa || '—').toUpperCase()}</span></td>
-      <td>${r.motorista || '—'}</td>
+      <td><span class="pedido-chip">${pedidoEsc || '—'}</span></td>
+      <td class="td-cliente">${clienteEsc || '—'}</td>
+      <td>${rotaEsc || '—'}</td>
+      <td><span class="placa-chip">${(placaEsc || '—').toUpperCase()}</span></td>
+      <td>${motoristaEsc || '—'}</td>
       <td>${freteBadge(r.frete)}</td>
       <td>
         <button class="badge ${sm.cls} badge-clickable editor-action"
-          onclick="event.stopPropagation(); quickStatus('${r.id}','${r.status || 'Pendente'}')"
+          onclick="event.stopPropagation(); quickStatus('${r.id}','${statusEsc}')"
           title="Clique para alterar status"
           style="display:${canEdit ? 'inline-flex' : 'none'}">
-          <span class="badge-dot"></span>${r.status || 'Pendente'}
+          <span class="badge-dot"></span>${statusEsc}
         </button>
         <span class="badge ${sm.cls}" style="display:${canEdit ? 'none' : 'inline-flex'}">
-          <span class="badge-dot"></span>${r.status || 'Pendente'}
+          <span class="badge-dot"></span>${statusEsc}
         </span>
       </td>
       <td class="td-actions" onclick="event.stopPropagation()">
         ${canEdit ? `<button class="btn btn-ghost btn-icon editor-action" onclick="openEditModal('${r.id}')" data-tip="Editar">${iconEdit()}</button>` : ''}
-        ${canDelete ? `<button class="btn btn-ghost btn-icon admin-action text-danger" onclick="confirmDelete('${r.id}','${escHtml(r.pedido || '')}','${escHtml(r.cliente || '')}','cronograma')" data-tip="Excluir">${iconTrash()}</button>` : ''}
+        ${canDelete ? `<button class="btn btn-ghost btn-icon admin-action text-danger" onclick="confirmDelete('${r.id}','${pedidoEsc}','${clienteEsc}','cronograma')" data-tip="Excluir">${iconTrash()}</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -230,25 +257,26 @@ function renderTable(rows) {
 function renderAguardando() {
   const list = document.getElementById('aguardandoList');
   const empty = document.getElementById('aguardandoEmpty');
-  const canEdit = isEditor(userProfile?.papel || 'viewer');
+  const canEdit = isEditor(userProfile?.papel || window.userProfile?.papel || 'viewer');
+  const items = aguardandoList?.length ? aguardandoList : (window.aguardandoList || []);
 
-  if (!aguardandoList || aguardandoList.length === 0) {
+  if (!items || items.length === 0) {
     list.innerHTML = '';
     empty.style.display = 'flex';
     document.getElementById('aguardandoCount').textContent = '0';
     return;
   }
   empty.style.display = 'none';
-  document.getElementById('aguardandoCount').textContent = aguardandoList.length;
+  document.getElementById('aguardandoCount').textContent = items.length;
 
-  list.innerHTML = aguardandoList.map(item => `
+  list.innerHTML = items.map(item => `
     <div class="ag-card" data-id="${item.id}" onclick="openViewAguardando('${item.id}')" title="Ver detalhes">
       <div class="ag-card-header">
-        <span class="ag-pedido">📦 ${item.pedido || 'S/N'}</span>
+        <span class="ag-pedido">📦 ${escHtml(item.pedido) || 'S/N'}</span>
         ${canEdit ? `<button class="btn btn-ghost btn-icon ag-del" onclick="event.stopPropagation(); confirmDelete('${item.id}','${escHtml(item.pedido || '')}','${escHtml(item.cliente || '')}','aguardando')">${iconTrash()}</button>` : ''}
       </div>
-      <div class="ag-cliente">${item.cliente || '\u2014'}</div>
-      ${item.observacoes ? `<div class="ag-obs">${item.observacoes}</div>` : ''}
+      <div class="ag-cliente">${escHtml(item.cliente) || '—'}</div>
+      ${item.observacoes ? `<div class="ag-obs">${escHtml(item.observacoes)}</div>` : ''}
       ${canEdit ? `<button class="btn btn-success btn-sm ag-agendar" onclick="event.stopPropagation(); agendarItem('${item.id}','${escHtml(item.pedido || '')}','${escHtml(item.cliente || '')}')">
         ${iconCheck()} Agendar
       </button>` : ''}
@@ -301,7 +329,8 @@ function agendarItem(agId, pedido, cliente) {
 
 // ── Editar linha ──────────────────────────────────────────────
 function openEditModal(id) {
-  const row = allRows.find(r => r.id === id);
+  const rows = allRows?.length ? allRows : (window.allRows || []);
+  const row = rows.find(r => r.id === id);
   if (!row) return;
   editingRowId = id;
   document.getElementById('modalTitle').textContent = 'Editar Registro';
@@ -455,7 +484,13 @@ function hidePageLoading() {
 }
 
 function escHtml(str) {
-  return str.replace(/'/g, "\'").replace(/"/g, '&quot;');
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ── Icons ─────────────────────────────────────────────────────
@@ -481,13 +516,14 @@ let _viewingId = null;
 let _viewingType = null; // 'cronograma' | 'aguardando'
 
 function openViewModal(id) {
-  const row = allRows.find(r => r.id === id);
+  const rows = allRows?.length ? allRows : (window.allRows || []);
+  const row = rows.find(r => r.id === id);
   if (!row) return;
   _viewingId = id;
   _viewingType = 'cronograma';
 
   const sm = getStatusMeta(row.status || 'Pendente');
-  const canEdit = isEditor(userProfile?.papel || 'viewer');
+  const canEdit = isEditor(userProfile?.papel || window.userProfile?.papel || 'viewer');
 
   document.getElementById('viewModalTitle').textContent =
     `Pedido ${row.pedido || 'S/N'}`;
@@ -542,12 +578,13 @@ function openViewModal(id) {
 
 // ── Modal de detalhes: Aguardando ────────────────────────────
 function openViewAguardando(id) {
-  const item = aguardandoList.find(i => i.id === id);
+  const items = aguardandoList?.length ? aguardandoList : (window.aguardandoList || []);
+  const item = items.find(i => i.id === id);
   if (!item) return;
   _viewingId = id;
   _viewingType = 'aguardando';
 
-  const canEdit = isEditor(userProfile?.papel || 'viewer');
+  const canEdit = isEditor(userProfile?.papel || window.userProfile?.papel || 'viewer');
 
   document.getElementById('viewModalTitle').textContent =
     `\u23f3 Aguardando: ${item.pedido || 'S/N'}`;

@@ -1,0 +1,43 @@
+{
+  "name": "cronograma-entregas",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão e Cronograma de Entregas — Shopping das Academias",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.js",
+    "build": "node scripts/build.js",
+    "build:staging": "node scripts/build.js --env staging",
+    "build:production": "node scripts/build.js --env production",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "lint": "eslint js/",
+    "lint:fix": "eslint js/ --fix",
+    "security:audit": "npm audit --audit-level=high",
+    "security:sbom": "cyclonedx-npm --output-format JSON --output-file sbom.json"
+  },
+  "keywords": [
+    "cronograma",
+    "entregas",
+    "supabase",
+    "devops",
+    "ci-cd"
+  ],
+  "author": "Shopping das Academias",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@cyclonedx/cyclonedx-npm": "^6.0.1",
+    "@playwright/test": "^1.50.1",
+    "@vitest/coverage-v8": "^5.1.0",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.20.0",
+    "eslint-plugin-security": "^3.0.1",
+    "globals": "^15.14.0",
+    "jsdom": "^26.0.0",
+    "sirv-cli": "^3.0.1",
+    "vitest": "^5.1.0"
+  }
+}

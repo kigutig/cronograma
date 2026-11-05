@@ -19,9 +19,16 @@ desktop.ini
 .env.local
 .env.production
 
-# Build
+# Build e artefatos
 dist/
 build/
+sbom.json
+
+# Testes e relatórios de cobertura
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
 
 # Segredos locais (nunca vão para o GitHub)
 # A chave do Groq fica no Supabase: supabase secrets set GROQ_API_KEY=...

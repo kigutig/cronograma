@@ -1,0 +1,27 @@
+rules:
+  - id: detect-innerhtml-xss
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = ...
+          - pattern: $EL.innerHTML += ...
+    message: "Potencial risco de XSS ao manipular innerHTML. Certifique-se de sanitizar ou utilizar escHtml() antes de injetar variáveis."
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  - id: detect-eval-usage
+    pattern: eval(...)
+    message: "Uso de eval detectado. Evite executar código arbitrário ou assegure que o payload venha estritamente de contexto seguro/validado."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: detect-hardcoded-credentials
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR = "gsk_..."
+          - pattern: |
+              $VAR = "eyJhbGciOi..."
+    message: "Possível credencial ou token sensível hardcoded no código-fonte. Utilize variáveis de ambiente ou segredos do servidor."
+    languages: [javascript, typescript]
+    severity: ERROR
+
